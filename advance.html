@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Advanced Lightroom Style Editor</title>
+<style>
+body {
+  background: #111;
+  color: white;
+  font-family: Arial;
+  text-align: center;
+}
+
+canvas {
+  margin-top: 20px;
+  max-width: 90%;
+  border-radius: 10px;
+}
+
+.controls {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  padding: 20px;
+}
+
+.control-box {
+  background: #222;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+input[type=range] {
+  width: 100%;
+}
+
+button {
+  padding: 10px 15px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  margin: 5px;
+}
+</style>
+</head>
+
+<body>
+
+<h2>Advanced Lightroom Style Editor</h2>
+
+<input type="file" id="upload" accept="image/*"><br>
+<canvas id="canvas"></canvas>
+
+<div class="controls">
+
+<div class="control-box">
+Exposure
+<input type="range" id="exposure" min="50" max="150" value="100">
+</div>
+
+<div class="control-box">
+Contrast
+<input type="range" id="contrast" min="50" max="150" value="100">
+</div>
+
+<div class="control-box">
+Saturation
+<input type="range" id="saturation" min="0" max="200" value="100">
+</div>
+
+<div class="control-box">
+Temperature
+<input type="range" id="temperature" min="-100" max="100" value="0">
+</div>
+
+<div class="control-box">
+Tint
+<input type="range" id="tint" min="-100" max="100" value="0">
+</div>
+
+<div class="control-box">
+Clarity
+<input type="range" id="clarity" min="50" max="200" value="100">
+</div>
+
+<div class="control-box">
+Vignette
+<input type="range" id="vignette" min="0" max="100" value="0">
+</div>
+
+</div>
+
+<button onclick="resetValues()">Reset</button>
+<button onclick="downloadImage()">Download</button>
+
+<script>
+let canvas = document.getElementById("canvas");
+let ctx = canvas.getContext("2d");
+let img = new Image();
+
+const sliders = document.querySelectorAll("input[type=range]");
+
+document.getElementById("upload").addEventListener("change", function(e){
+  const reader = new FileReader();
+  reader.onload = function(event){
+    img.onload = function(){
+      canvas.width = img.width;
+      canvas.height = img.height;
+      drawImage();
+    }
+    img.src = event.target.result;
+  }
+  reader.readAsDataURL(e.target.files[0]);
+});
+
+sliders.forEach(slider => {
+  slider.addEventListener("input", drawImage);
+});
+
+function drawImage(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  let exposure = document.getElementById("exposure").value;
+  let contrast = document.getElementById("contrast").value;
+  let saturation = document.getElementById("saturation").value;
+  let temperature = document.getElementById("temperature").value;
+  let tint = document.getElementById("tint").value;
+  let clarity = document.getElementById("clarity").value;
+  let vignette = document.getElementById("vignette").value;
+
+  let hueRotate = temperature / 2;
+  let sepia = tint > 0 ? tint/300 : 0;
+
+  ctx.filter = `
+    brightness(${exposure}%)
+    contrast(${contrast}%)
+    saturate(${saturation}%)
+    hue-rotate(${hueRotate}deg)
+    sepia(${sepia})
+    contrast(${clarity}%)
+  `;
+
+  ctx.drawImage(img,0,0);
+
+  if(vignette > 0){
+    let gradient = ctx.createRadialGradient(
+      canvas.width/2, canvas.height/2, canvas.width/4,
+      canvas.width/2, canvas.height/2, canvas.width/1.2
+    );
+    gradient.addColorStop(0, "rgba(0,0,0,0)");
+    gradient.addColorStop(1, `rgba(0,0,0,${vignette/100})`);
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+  }
+}
+
+function resetValues(){
+  sliders.forEach(slider => slider.value = 100);
+  document.getElementById("temperature").value = 0;
+  document.getElementById("tint").value = 0;
+  document.getElementById("vignette").value = 0;
+  drawImage();
+}
+
+function downloadImage(){
+  const link = document.createElement("a");
+  link.download = "edited-image.png";
+  link.href = canvas.toDataURL();
+  link.click();
+}
+</script>
+
+</body>
+</html>
